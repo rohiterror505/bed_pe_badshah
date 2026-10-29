@@ -12,7 +12,16 @@ html, body, #root {
   color: white;
   user-select: none;
   -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
   font-family: system-ui, sans-serif;
+  /* Use dynamic viewport height to handle mobile browser chrome */
+  height: 100vh;
+  height: 100dvh;
 }
 
 .font-display { font-family: 'Bangers', system-ui, sans-serif; letter-spacing: 0.05em; }
+
+/* Safe area insets for notched phones */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }

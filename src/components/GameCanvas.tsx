@@ -11,7 +11,17 @@ export function GameCanvas({ canvasRef, engineRef, paused }: Props) {
   useEffect(() => {
     const onResize = () => engineRef.current?.resize();
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', onResize);
+    }
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', onResize);
+      }
+    };
   }, [engineRef]);
 
   useEffect(() => {

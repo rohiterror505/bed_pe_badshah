@@ -40,6 +40,8 @@ export class GameEngine {
   private running = false;
   private paused = false;
   private aiming: { x: number; y: number } = { x: 0, y: 0 };
+  private logicalW = 0;
+  private logicalH = 0;
 
   private bubbles: SpeechBubble[] = [];
   private floatingScores: FloatingScore[] = [];
@@ -73,8 +75,10 @@ export class GameEngine {
     this.personalBest = personalBest;
     this.score = new ScoreManager(ROUND_TIME);
     this.spawner = new SpawnManager(settings.difficulty, this.images);
-    const w = canvas.width;
-    const h = canvas.height;
+    const w = canvas.clientWidth || canvas.width;
+    const h = canvas.clientHeight || canvas.height;
+    this.logicalW = w;
+    this.logicalH = h;
     this.player = new Player(w / 2, h - 80, this.images);
   }
 
@@ -84,6 +88,7 @@ export class GameEngine {
 
   start() {
     this.resize();
+    this.aiming = { x: this.logicalW / 2, y: this.logicalH * 0.45 };
     this.running = true;
     this.paused = false;
     this.inCountdown = true;
@@ -161,7 +166,7 @@ export class GameEngine {
 
     this.player.update(dt);
 
-    const spawn = this.spawner.update(dt, performance.now(), this.canvas.width, this.canvas.height, this.enemies.length);
+    const spawn = this.spawner.update(dt, performance.now(), this.logicalW, this.logicalH, this.enemies.length);
     if (spawn) {
       this.enemies.push(spawn.enemy);
       if (spawn.isSpecial) {
@@ -171,7 +176,7 @@ export class GameEngine {
 
     // Enemies update + dodge against projectiles (no dialogue)
     for (const e of this.enemies) {
-      e.update(dt, this.canvas.width, this.canvas.height);
+      e.update(dt, this.logicalW, this.logicalH);
       for (const p of this.projectiles) {
         if (p.alive && e.alive) e.tryDodge(p.pos.x, p.pos.y);
       }
@@ -179,7 +184,7 @@ export class GameEngine {
 
     // Projectiles update + collision
     for (const p of this.projectiles) {
-      p.update(dt, this.canvas.width, this.canvas.height);
+      p.update(dt, this.logicalW, this.logicalH);
       if (!p.alive) continue;
       let hit = false;
       for (const e of this.enemies) {
@@ -271,8 +276,8 @@ export class GameEngine {
 
   private render() {
     const ctx = this.ctx;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    const w = this.logicalW;
+    const h = this.logicalH;
     const sx = this.settings.reducedShake ? 0 : (Math.random() - 0.5) * this.shake;
     const sy = this.settings.reducedShake ? 0 : (Math.random() - 0.5) * this.shake;
 
@@ -305,7 +310,8 @@ export class GameEngine {
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       ctx.fillRect(-50, -50, w + 100, h + 100);
       ctx.fillStyle = '#ffea00';
-      ctx.font = '120px Bangers, sans-serif';
+      const size = Math.max(48, Math.min(120, Math.floor(Math.min(w, h) * 0.18)));
+      ctx.font = `${size}px Bangers, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const txt = this.countdown > 0 ? String(this.countdown) : 'SHOOT!';
@@ -366,7 +372,7 @@ export class GameEngine {
       const tw = ctx.measureText(b.text).width;
       const bw = tw + 20;
       const bh = 28;
-      const bx = Math.min(Math.max(b.x - bw / 2, 4), this.canvas.width - bw - 4);
+      const bx = Math.min(Math.max(b.x - bw / 2, 4), this.logicalW - bw - 4);
       const by = b.y - bh;
       ctx.fillStyle = 'rgba(0,0,0,0.85)';
       ctx.strokeStyle = b.color;
@@ -407,14 +413,19 @@ export class GameEngine {
     this.canvas.width = Math.floor(rect.width * dpr);
     this.canvas.height = Math.floor(rect.height * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // adjust player to new logical size
+    // logical (CSS-pixel) dimensions used for all gameplay math
     const w = rect.width;
     const h = rect.height;
+    this.logicalW = w;
+    this.logicalH = h;
     this.player.pos.x = w / 2;
     this.player.pos.y = h - 95;
     // Crotch = center of the lying body
     this.player.fireOrigin.x = this.player.pos.x;
     this.player.fireOrigin.y = this.player.pos.y - 8;
+    // keep aim inside bounds
+    this.aiming.x = Math.min(Math.max(this.aiming.x, 0), w);
+    this.aiming.y = Math.min(Math.max(this.aiming.y, 0), h);
   }
 
   private endGame() {
