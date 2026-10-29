@@ -39,7 +39,14 @@ export class SpawnManager {
     const interval = Math.max(300, cfg.spawnInterval - growth * 80);
     this.wave = 1 + growth;
 
-    if (now - this.lastSpawn > interval && aliveCount < cfg.maxAlive + Math.min(3, growth)) {
+    // On small screens cap total enemies to keep the phone readable.
+    // Desktop keeps the difficulty-based cap plus wave growth.
+    const isMobile = width < 768;
+    const baseCap = isMobile ? Math.min(cfg.maxAlive, 5) : cfg.maxAlive;
+    const growthBonus = isMobile ? Math.min(1, growth) : Math.min(3, growth);
+    const maxAlive = baseCap + growthBonus;
+
+    if (now - this.lastSpawn > interval && aliveCount < maxAlive) {
       this.lastSpawn = now;
       // Strictly alternate so MC Stan and Rakhi always appear in equal quantity
       const kind: EnemyKind = this.toggle ? 'mcstan' : 'rakhi';
